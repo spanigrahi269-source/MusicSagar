@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Music Sagar",
+    "slug": "music-sagar",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0f0f1a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.musicsagar.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f0f1a"
+      },
+      "package": "com.musicsagar.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "scheme": "musicsagar",
+    "plugins": [
+      "expo-av",
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Allow Music Sagar to use Face ID."
+        }
+      ]
+    ]
+  }
+}

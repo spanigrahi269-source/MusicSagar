@@ -1,0 +1,189 @@
+"""
+Standalone YouTube API Quota Checker
+Checks all 30 API keys without requiring any dependencies
+"""
+
+import urllib.request
+import json
+from datetime import datetime
+
+# Read API keys from .env file
+env_path = 'backend/.env'
+api_keys = {}
+
+print("Reading API keys from backend/.env...")
+try:
+    with open(env_path, 'r') as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith('YOUTUBE_API_KEY_'):
+                key, value = line.split('=', 1)
+                api_keys[key] = value.strip().strip('"').strip("'")
+    print(f"Found {len(api_keys)} API keys configured\n")
+except Exception as e:
+    print(f"Error reading .env file: {e}")
+    exit(1)
+
+def check_quota_for_key(api_key, key_number):
+    """Check if an API key is working using urllib"""
+    try:
+        # Make a minimal YouTube API request
+        url = f'https://www.googleapis.com/youtube/v3/search?part=snippet&q=music&maxResults=1&type=video&key={api_key}'
+        
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            data = json.loads(response.read().decode())
+            return {
+                'key_number': key_number,
+                'status': '✅ WORKING',
+                'error': None
+            }
+    except urllib.error.HTTPError as e:
+        error_body = e.read().decode()
+        if 'quotaExceeded' in error_body:
+            return {
+                'key_number': key_number,
+                'status': '❌ QUOTA EXCEEDED',
+                'error': 'Daily quota exhausted'
+            }
+        elif 'invalid' in error_body.lower() or 'API key not valid' in error_body:
+            return {
+                'key_number': key_number,
+                'status': '❌ INVALID',
+                'error': 'Invalid or disabled'
+            }
+        else:
+            return {
+                'key_number': key_number,
+                'status': '⚠️ ERROR',
+                'error': f'HTTP {e.code}'
+            }
+    except Exception as e:
+        return {
+            'key_number': key_number,
+            'status': '⚠️ ERROR',
+            'error': str(e)[:50]
+        }
+
+print("=" * 80)
+print("YOUTUBE API QUOTA CHECK - MARCH 2026")
+print(f"Checked on: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+print("=" * 80)
+print()
+
+working_keys = []
+quota_exceeded_keys = []
+invalid_keys = []
+error_keys = []
+
+# Check all keys
+for i in range(1, 31):
+    key_name = f'YOUTUBE_API_KEY_{i}'
+    api_key = api_keys.get(key_name)
+    
+    if not api_key:
+        continue
+    
+    print(f"Checking Key {i:2d}...", end=' ', flush=True)
+    result = check_quota_for_key(api_key, i)
+    print(result['status'])
+    
+    if result['status'] == '✅ WORKING':
+        working_keys.append(result)
+    elif result['status'] == '❌ QUOTA EXCEEDED':
+        quota_exceeded_keys.append(result)
+    elif result['status'] == '❌ INVALID':
+        invalid_keys.append(result)
+    else:
+        error_keys.append(result)
+
+# Summary
+print()
+print("=" * 80)
+print("SUMMARY")
+print("=" * 80)
+print(f"✅ Working Keys:        {len(working_keys)}")
+print(f"❌ Quota Exceeded:      {len(quota_exceeded_keys)}")
+print(f"❌ Invalid Keys:        {len(invalid_keys)}")
+print(f"⚠️  Error Keys:          {len(error_keys)}")
+print(f"📊 Total Keys Checked:  {len(working_keys) + len(quota_exceeded_keys) + len(invalid_keys) + len(error_keys)}")
+print()
+
+# Available quota estimation
+if working_keys:
+    print("=" * 80)
+    print("AVAILABLE QUOTA TODAY")
+    print("=" * 80)
+    print(f"Working keys: {len(working_keys)}")
+    print(f"Quota per key: 10,000 units/day")
+    print(f"Total available: {len(working_keys) * 10000:,} units/day")
+    print()
+    print("Quota costs:")
+    print("  - Search: 100 units per request")
+    print("  - Video details: 1 unit per request")
+    print("  - Channel details: 1 unit per request")
+    print()
+    print(f"Estimated searches available today: ~{len(working_keys) * 100} searches")
+    print(f"Estimated video detail requests: ~{len(working_keys) * 10000} requests")
+    print()
+
+# Working keys list
+if working_keys:
+    print("Working Keys:", ', '.join([f"#{k['key_number']}" for k in working_keys]))
+    print()
+
+# Details
+if quota_exceeded_keys:
+    print("=" * 80)
+    print("QUOTA EXCEEDED KEYS")
+    print("=" * 80)
+    exceeded_nums = [k['key_number'] for k in quota_exceeded_keys]
+    print(f"Keys: {', '.join([f'#{n}' for n in exceeded_nums])}")
+    print("These keys will reset at midnight Pacific Time")
+    print(f"Will add {len(quota_exceeded_keys) * 10000:,} more quota units after reset")
+    print()
+
+if invalid_keys:
+    print("=" * 80)
+    print("INVALID KEYS (Need replacement)")
+    print("=" * 80)
+    for key in invalid_keys:
+        print(f"  Key #{key['key_number']:2d}: {key['error']}")
+    print("Visit: https://console.cloud.google.com/apis/credentials")
+    print()
+
+if error_keys:
+    print("=" * 80)
+    print("ERROR KEYS")
+    print("=" * 80)
+    for key in error_keys:
+        print(f"  Key #{key['key_number']:2d}: {key['error']}")
+    print()
+
+# Recommendations
+print("=" * 80)
+print("RECOMMENDATIONS")
+print("=" * 80)
+if len(working_keys) >= 20:
+    print("✅ Excellent! You have plenty of API quota available.")
+    print(f"   Total quota: {len(working_keys) * 10000:,} units/day")
+    print("   Your app can handle heavy usage today.")
+elif len(working_keys) >= 10:
+    print("✅ Good! You have sufficient API quota.")
+    print(f"   Total quota: {len(working_keys) * 10000:,} units/day")
+    print("   Monitor usage if you expect heavy traffic.")
+elif len(working_keys) >= 5:
+    print("⚠️  Moderate quota available.")
+    print(f"   Total quota: {len(working_keys) * 10000:,} units/day")
+    print("   Consider getting more keys if usage increases.")
+else:
+    print("❌ Low quota! Get more API keys to ensure availability.")
+    print(f"   Current quota: {len(working_keys) * 10000:,} units/day")
+
+if quota_exceeded_keys:
+    print(f"\n💡 {len(quota_exceeded_keys)} keys will reset at midnight Pacific Time")
+    print(f"   That will add {len(quota_exceeded_keys) * 10000:,} more quota units")
+
+print("\n" + "=" * 80)
+print("Note: Each check used 1 quota unit per key")
+print("=" * 80)

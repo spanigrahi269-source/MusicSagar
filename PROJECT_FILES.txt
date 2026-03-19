@@ -1,0 +1,29 @@
+Music Sagar - Essential Files
+=============================
+
+SETUP & START:
+- setup-local.bat       → Run once to install dependencies
+- start-local.bat       → Start the application
+
+DOCUMENTATION:
+- README.md             → Complete project documentation
+- QUICK_START.md        → Quick reference guide
+- API_DOCUMENTATION.md  → API endpoints reference
+
+CONFIGURATION:
+- .env                  → Environment variables (API keys, database)
+
+CODE:
+- backend/              → FastAPI backend code
+- frontend/             → React frontend code
+
+DATABASE:
+- music_sagar.db        → SQLite database (auto-created)
+
+GENERATED:
+- backend/venv/         → Python virtual environment
+- frontend/node_modules/→ Node.js dependencies
+
+---
+Total: 5 essential files + 2 code folders
+Clean and minimal setup!

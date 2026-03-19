@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Music Sagar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1db954 0%, #191414 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .auth-container {
+            width: 100%;
+            max-width: 450px;
+            padding: 20px;
+        }
+
+        .auth-box {
+            background: #000;
+            border-radius: 8px;
+            padding: 48px 40px;
+            box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
+        }
+
+        .logo {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .logo-s {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            background: #1db954;
+            color: #000;
+            font-size: 36px;
+            font-weight: bold;
+            line-height: 60px;
+            border-radius: 50%;
+            margin-bottom: 16px;
+        }
+
+        .logo-text {
+            display: block;
+            color: #fff;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        h2 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 32px;
+            font-size: 24px;
+        }
+
+        .error-message {
+            background: #e22134;
+            color: #fff;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        input {
+            background: #333;
+            border: 1px solid #333;
+            color: #fff;
+            padding: 14px 16px;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #1db954;
+        }
+
+        input:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        button {
+            background: #1db954;
+            color: #000;
+            border: none;
+            padding: 14px;
+            border-radius: 500px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.2s;
+            margin-top: 8px;
+        }
+
+        button:hover:not(:disabled) {
+            transform: scale(1.04);
+            background: #1ed760;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .auth-link {
+            text-align: center;
+            margin-top: 24px;
+            color: #b3b3b3;
+        }
+
+        .auth-link a {
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .auth-link a:hover {
+            color: #1db954;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-box">
+            <div class="logo">
+                <span class="logo-s">S</span>
+                <span class="logo-text">Music Sagar</span>
+            </div>
+            <h2>Login to Music Sagar</h2>
+            <div id="error" class="error-message" style="display: none;"></div>
+            <form id="loginForm">
+                <input
+                    type="email"
+                    id="email"
+                    name="email"
+                    placeholder="Email"
+                    value="sagar@example.com"
+                    required
+                    autocomplete="email"
+                />
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Password"
+                    value="Sagar@269"
+                    required
+                    autocomplete="current-password"
+                />
+                <button type="submit" id="submitBtn">Log In</button>
+            </form>
+            <p class="auth-link">
+                Don't have an account? <a href="/signup.html">Sign up</a>
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('loginForm');
+        const errorDiv = document.getElementById('error');
+        const submitBtn = document.getElementById('submitBtn');
+        const emailInput = document.getElementById('email');
+        const passwordInput = document.getElementById('password');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // Hide error
+            errorDiv.style.display = 'none';
+            
+            // Disable form
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Logging in...';
+            emailInput.disabled = true;
+            passwordInput.disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:8000/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: emailInput.value,
+                        password: passwordInput.value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Login failed');
+                }
+                
+                const token = data.access_token;
+                
+                if (token) {
+                    // Store token in multiple locations
+                    localStorage.setItem('token', token);
+                    sessionStorage.setItem('token', token);
+                    
+                    // Set cookie
+                    const expires = new Date();
+                    expires.setTime(expires.getTime() + 24 * 60 * 60 * 1000);
+                    document.cookie = `auth_token=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+                    
+                    // Pass token in URL hash (most reliable method)
+                    window.location.href = `/#token=${encodeURIComponent(token)}`;
+                } else {
+                    throw new Error('No token received');
+                }
+            } catch (err) {
+                errorDiv.textContent = err.message;
+                errorDiv.style.display = 'block';
+                
+                // Re-enable form
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Log In';
+                emailInput.disabled = false;
+                passwordInput.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

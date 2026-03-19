@@ -1,0 +1,747 @@
+import { useState, useEffect } from 'react';
+import api from '../api/axios';
+import { useTheme } from '../contexts/ThemeContext';
+
+function MusicPlayer({ currentSong, onClose }) {
+  const [liked, setLiked] = useState(false);
+  const [showPlaylistModal, setShowPlaylistModal] = useState(false);
+  const [playlists, setPlaylists] = useState([]);
+  const [newPlaylistName, setNewPlaylistName] = useState('');
+  const [loading, setLoading] = useState(false);
+  
+  // Theme context
+  const { updateThemeFromSong } = useTheme();
+
+  useEffect(() => {
+    if (currentSong) {
+      addToHistory();
+      checkLikeStatus();
+      
+      // Update theme based on song
+      updateThemeFromSong(currentSong);
+    }
+  }, [currentSong]);
+
+  useEffect(() => {
+    if (showPlaylistModal) {
+      fetchPlaylists();
+    }
+  }, [showPlaylistModal]);
+    if (!window.YT) {
+      const tag = document.createElement('script');
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+    }
+
+    // Cleanup player on unmount
+    return () => {
+      if (player) {
+        player.destroy();
+      }
+      if (progressIntervalRef.current) {
+        clearInterval(progressIntervalRef.current);
+      }
+    };
+  }, []);
+
+  const initializePlayer = () => {
+    // Wait for YouTube API to be ready
+    const checkYTReady = setInterval(() => {
+      if (window.YT && window.YT.Player) {
+        clearInterval(checkYTReady);
+        createPlayer();
+      }
+    }, 100);
+  };
+
+  const createPlayer = () => {
+    if (!playerContainerRef.current || !currentSong) return;
+
+    // Destroy existing player
+    if (player) {
+      player.destroy();
+    }
+
+    // Stop existing progress tracking
+    stopProgressTracking();
+
+    // Create new player
+    const newPlayer = new window.YT.Player(playerContainerRef.current, {
+      videoId: currentSong.youtube_video_id,
+      playerVars: {
+        autoplay: 1,
+        controls: isAudioMode ? 0 : 1,
+        modestbranding: 1,
+        rel: 0
+      },
+      events: {
+        onReady: (event) => {
+          setPlayer(event.target);
+          // Get duration when player is ready
+          try {
+            const videoDuration = event.target.getDuration();
+            setDuration(videoDuration);
+          } catch (err) {
+            console.error('Failed to get duration:', err);
+          }
+          // Start progress tracking
+          startProgressTracking(event.target);
+        },
+        onStateChange: (event) => {
+          // Update playing state
+          if (event.data === window.YT.PlayerState.PLAYING) {
+            setIsPlaying(true);
+            startProgressTracking(event.target);
+          } else if (event.data === window.YT.PlayerState.PAUSED) {
+            setIsPlaying(false);
+            stopProgressTracking();
+          } else if (event.data === window.YT.PlayerState.ENDED) {
+            setIsPlaying(false);
+            stopProgressTracking();
+          }
+        }
+      }
+    });
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Don't trigger if user is typing in an input
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+      
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        seekForward();
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault();
+        seekBackward();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [player, isPlaying]);
+
+  const addToHistory = async () => {
+    try {
+      await api.post('/history', currentSong);
+    } catch (err) {
+      console.error('Failed to add to history:', err);
+    }
+  };
+
+  const checkLikeStatus = async () => {
+    try {
+      const response = await api.get('/stats/liked');
+      const likedSongs = response.data.liked_songs || [];
+      const isLiked = likedSongs.some(song => song.youtube_video_id === currentSong.youtube_video_id);
+      setLiked(isLiked);
+    } catch (err) {
+      console.error('Failed to check like status:', err);
+    }
+  };
+
+  const fetchPlaylists = async () => {
+    try {
+      const response = await api.get('/playlists');
+      setPlaylists(response.data);
+    } catch (err) {
+      console.error('Failed to fetch playlists:', err);
+    }
+  };
+
+  const createPlaylist = async () => {
+    if (!newPlaylistName.trim()) return;
+    
+    setLoading(true);
+    try {
+      await api.post('/playlists', { name: newPlaylistName });
+      setNewPlaylistName('');
+      await fetchPlaylists();
+    } catch (err) {
+      console.error('Failed to create playlist:', err);
+      alert('Failed to create playlist');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addToPlaylist = async (playlistId) => {
+    setLoading(true);
+    try {
+      await api.post(`/playlists/${playlistId}/add-song`, currentSong);
+      alert('Song added to playlist!');
+      setShowPlaylistModal(false);
+    } catch (err) {
+      console.error('Failed to add to playlist:', err);
+      if (err.response?.data?.detail) {
+        alert(err.response.data.detail);
+      } else {
+        alert('Failed to add song to playlist');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setIsAudioMode(!isAudioMode);
+    // Recreate player with new mode
+    setTimeout(() => createPlayer(), 100);
+  };
+
+  const toggleFullscreen = () => {
+    setIsFullscreen(!isFullscreen);
+  };
+
+  // Progress tracking functions
+  const startProgressTracking = (playerInstance) => {
+    // Clear existing interval
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+    }
+
+    // Update progress every second
+    progressIntervalRef.current = setInterval(() => {
+      try {
+        if (playerInstance && playerInstance.getCurrentTime) {
+          const current = playerInstance.getCurrentTime();
+          const total = playerInstance.getDuration();
+          setCurrentTime(current);
+          setDuration(total);
+        }
+      } catch (err) {
+        console.error('Progress tracking error:', err);
+      }
+    }, 1000);
+  };
+
+  const stopProgressTracking = () => {
+    if (progressIntervalRef.current) {
+      clearInterval(progressIntervalRef.current);
+      progressIntervalRef.current = null;
+    }
+  };
+
+  // Format time in mm:ss or hh:mm:ss
+  const formatTime = (seconds) => {
+    if (!seconds || isNaN(seconds)) return '0:00';
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${minutes}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Handle progress bar click to seek
+  const handleProgressClick = (e) => {
+    if (!player || !duration) return;
+    
+    const progressBar = e.currentTarget;
+    const rect = progressBar.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = clickX / rect.width;
+    const newTime = percentage * duration;
+    
+    try {
+      player.seekTo(newTime, true);
+      setCurrentTime(newTime);
+    } catch (err) {
+      console.error('Seek failed:', err);
+    }
+  };
+
+  // Handle mouse down to start dragging
+  const handleMouseDown = (e) => {
+    if (!player || !duration) return;
+    setIsDragging(true);
+    handleSeek(e);
+  };
+
+  // Handle mouse move for dragging and hover tooltip
+  const handleMouseMove = (e) => {
+    if (!progressBarRef.current || !duration) return;
+    
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, mouseX / rect.width));
+    const time = percentage * duration;
+    
+    setHoverTime(time);
+    setHoverPosition(mouseX);
+    
+    if (isDragging) {
+      handleSeek(e);
+    }
+  };
+
+  // Handle mouse up to stop dragging
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Handle mouse leave to hide tooltip
+  const handleMouseLeave = () => {
+    setHoverTime(null);
+    setIsDragging(false);
+  };
+
+  // Handle seek during drag
+  const handleSeek = (e) => {
+    if (!player || !duration || !progressBarRef.current) return;
+    
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, clickX / rect.width));
+    const newTime = percentage * duration;
+    
+    try {
+      player.seekTo(newTime, true);
+      setCurrentTime(newTime);
+    } catch (err) {
+      console.error('Seek failed:', err);
+    }
+  };
+
+  // Handle touch events for mobile
+  const handleTouchStart = (e) => {
+    if (!player || !duration) return;
+    setIsDragging(true);
+    handleTouchSeek(e);
+  };
+
+  const handleTouchMove = (e) => {
+    if (!isDragging || !player || !duration) return;
+    handleTouchSeek(e);
+  };
+
+  const handleTouchEnd = () => {
+    setIsDragging(false);
+  };
+
+  const handleTouchSeek = (e) => {
+    if (!progressBarRef.current || !duration) return;
+    
+    const touch = e.touches[0];
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const touchX = touch.clientX - rect.left;
+    const percentage = Math.max(0, Math.min(1, touchX / rect.width));
+    const newTime = percentage * duration;
+    
+    try {
+      player.seekTo(newTime, true);
+      setCurrentTime(newTime);
+    } catch (err) {
+      console.error('Seek failed:', err);
+    }
+  };
+
+  // Add global mouse up listener for drag
+  useEffect(() => {
+    if (isDragging) {
+      window.addEventListener('mouseup', handleMouseUp);
+      return () => window.removeEventListener('mouseup', handleMouseUp);
+    }
+  }, [isDragging]);
+
+  const togglePlayPause = () => {
+    if (!player) return;
+    
+    if (isPlaying) {
+      player.pauseVideo();
+    } else {
+      player.playVideo();
+    }
+  };
+
+  const seekForward = () => {
+    if (!player) {
+      console.log('Player not ready');
+      return;
+    }
+    
+    try {
+      // Check if player methods are available
+      if (typeof player.getCurrentTime !== 'function' || typeof player.getDuration !== 'function') {
+        console.log('Player methods not available yet');
+        return;
+      }
+      
+      const current = player.getCurrentTime();
+      const total = player.getDuration();
+      
+      if (isNaN(current) || isNaN(total)) {
+        console.log('Invalid time values');
+        return;
+      }
+      
+      const newTime = Math.min(current + 10, total);
+      player.seekTo(newTime, true);
+      
+      // Update state immediately for visual feedback
+      setCurrentTime(newTime);
+      
+      console.log(`Seeked forward: ${current.toFixed(2)}s -> ${newTime.toFixed(2)}s`);
+    } catch (err) {
+      console.error('Seek forward failed:', err);
+    }
+  };
+
+  const seekBackward = () => {
+    if (!player) {
+      console.log('Player not ready');
+      return;
+    }
+    
+    try {
+      // Check if player methods are available
+      if (typeof player.getCurrentTime !== 'function') {
+        console.log('Player methods not available yet');
+        return;
+      }
+      
+      const current = player.getCurrentTime();
+      
+      if (isNaN(current)) {
+        console.log('Invalid time value');
+        return;
+      }
+      
+      const newTime = Math.max(current - 10, 0);
+      player.seekTo(newTime, true);
+      
+      // Update state immediately for visual feedback
+      setCurrentTime(newTime);
+      
+      console.log(`Seeked backward: ${current.toFixed(2)}s -> ${newTime.toFixed(2)}s`);
+    } catch (err) {
+      console.error('Seek backward failed:', err);
+    }
+  };
+
+  const handleLike = async () => {
+    try {
+      if (liked) {
+        await api.delete(`/stats/like/${currentSong.youtube_video_id}`);
+        setLiked(false);
+      } else {
+        await api.post(`/stats/like/${currentSong.youtube_video_id}`);
+        setLiked(true);
+      }
+    } catch (err) {
+      console.error('Failed to toggle like:', err);
+    }
+  };
+
+  if (!currentSong) return null;
+
+  return (
+    <>
+      {/* Theme Indicator */}
+      {isThemeEnabled && currentTheme !== 'default' && (
+        <div className="theme-indicator">
+          <span className="emoji">{getThemeInfo(currentTheme).emoji}</span>
+          <span>{getThemeInfo(currentTheme).label}</span>
+        </div>
+      )}
+      
+      {/* Fullscreen Mode */}
+      {isFullscreen && (
+        <div className="fullscreen-player">
+          <div className="fullscreen-background">
+            <img src={currentSong.thumbnail} alt="" className="fullscreen-bg-image" />
+            <div className="fullscreen-overlay"></div>
+          </div>
+          
+          <div className="fullscreen-content">
+            <button className="fullscreen-close-btn" onClick={toggleFullscreen} title="Exit Fullscreen">
+              ✕
+            </button>
+            
+            <div className="fullscreen-center">
+              <div className="fullscreen-album-art">
+                <img src={currentSong.thumbnail} alt={currentSong.title} />
+                <div className="music-gif-overlay">
+                  <div className="music-wave">
+                    <span className="wave-bar"></span>
+                    <span className="wave-bar"></span>
+                    <span className="wave-bar"></span>
+                    <span className="wave-bar"></span>
+                    <span className="wave-bar"></span>
+                    <span className="wave-bar"></span>
+                    <span className="wave-bar"></span>
+                  </div>
+                  <div className="floating-notes">
+                    <span className="note">♪</span>
+                    <span className="note">♫</span>
+                    <span className="note">♪</span>
+                    <span className="note">♫</span>
+                    <span className="note">♪</span>
+                    <span className="note">♫</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="fullscreen-info">
+                <h2>{currentSong.title}</h2>
+                <p>{currentSong.channel}</p>
+                {currentSong.duration && <span className="fullscreen-duration">⏱️ {currentSong.duration}</span>}
+              </div>
+              
+              {/* Progress Bar in Fullscreen */}
+              <div className="fullscreen-progress-container">
+                <span className="fullscreen-time">{formatTime(currentTime)}</span>
+                <div 
+                  ref={progressBarRef}
+                  className={`fullscreen-progress-bar ${isDragging ? 'dragging' : ''}`}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseLeave={handleMouseLeave}
+                  onTouchStart={handleTouchStart}
+                  onTouchMove={handleTouchMove}
+                  onTouchEnd={handleTouchEnd}
+                >
+                  <div 
+                    className="fullscreen-progress-fill" 
+                    style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+                  >
+                    <div className="fullscreen-progress-handle"></div>
+                  </div>
+                  {/* Hover Tooltip */}
+                  {hoverTime !== null && !isDragging && (
+                    <div 
+                      className="fullscreen-progress-tooltip"
+                      style={{ left: `${hoverPosition}px` }}
+                    >
+                      {formatTime(hoverTime)}
+                    </div>
+                  )}
+                </div>
+                <span className="fullscreen-time">{formatTime(duration)}</span>
+              </div>
+              
+              <div className="fullscreen-controls">
+                <button className="fullscreen-control-btn" onClick={seekBackward} title="Rewind 10s">
+                  ⏪
+                </button>
+                <button className="fullscreen-play-btn" onClick={togglePlayPause} title={isPlaying ? "Pause" : "Play"}>
+                  {isPlaying ? '⏸️' : '▶️'}
+                </button>
+                <button className="fullscreen-control-btn" onClick={seekForward} title="Forward 10s">
+                  ⏩
+                </button>
+              </div>
+              
+              <div className="fullscreen-actions">
+                <button 
+                  className={`fullscreen-action-btn ${liked ? 'liked' : ''}`}
+                  onClick={handleLike}
+                  title={liked ? "Unlike" : "Like"}
+                >
+                  {liked ? '❤️' : '🤍'}
+                </button>
+                <button 
+                  className="fullscreen-action-btn"
+                  onClick={() => setShowPlaylistModal(true)}
+                  title="Add to Playlist"
+                >
+                  ➕
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="music-player">
+        <div className="player-left">
+          <img src={currentSong.thumbnail} alt={currentSong.title} className="player-thumbnail" />
+          <div className="player-info">
+            <h4>{currentSong.title}</h4>
+            <p>{currentSong.channel}</p>
+            {currentSong.duration && <span className="player-duration">⏱️ {currentSong.duration}</span>}
+          </div>
+        </div>
+
+        <div className="player-center">
+          <div className="player-display">
+            {isAudioMode ? (
+              <div className="audio-player">
+                <div className="audio-visualizer">
+                  <div className="audio-icon">🎵</div>
+                  <div className="audio-bars">
+                    <span className="bar"></span>
+                    <span className="bar"></span>
+                    <span className="bar"></span>
+                    <span className="bar"></span>
+                    <span className="bar"></span>
+                  </div>
+                </div>
+                {/* Floating musical notes */}
+                <span className="note-float">♪</span>
+                <span className="note-float">♫</span>
+                <span className="note-float">♪</span>
+                <span className="note-float">♫</span>
+                <span className="note-float">♪</span>
+                <div ref={playerContainerRef} className="audio-iframe" />
+              </div>
+            ) : (
+              <div ref={playerContainerRef} className="player-iframe" />
+            )}
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="progress-container">
+            <span className="time-display">{formatTime(currentTime)}</span>
+            <div 
+              ref={progressBarRef}
+              className={`progress-bar ${isDragging ? 'dragging' : ''}`}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <div 
+                className="progress-fill" 
+                style={{ width: `${duration > 0 ? (currentTime / duration) * 100 : 0}%` }}
+              >
+                <div className="progress-handle"></div>
+              </div>
+              {/* Hover Tooltip */}
+              {hoverTime !== null && !isDragging && (
+                <div 
+                  className="progress-tooltip"
+                  style={{ left: `${hoverPosition}px` }}
+                >
+                  {formatTime(hoverTime)}
+                </div>
+              )}
+            </div>
+            <span className="time-display">{formatTime(duration)}</span>
+          </div>
+          
+          <div className="player-controls">
+            <button className="control-btn" onClick={seekBackward} title="Rewind 10s (←)">
+              ⏪
+            </button>
+            <button className="control-btn play-pause-btn" onClick={togglePlayPause} title={isPlaying ? "Pause (Space)" : "Play (Space)"}>
+              {isPlaying ? '⏸️' : '▶️'}
+            </button>
+            <button className="control-btn" onClick={seekForward} title="Forward 10s (→)">
+              ⏩
+            </button>
+          </div>
+        </div>
+
+        <div className="player-right">
+          <button 
+            className="karaoke-btn"
+            onClick={() => setShowKaraoke(true)}
+            title="Karaoke Mode"
+          >
+            🎤
+          </button>
+          <button 
+            className="fullscreen-toggle-btn"
+            onClick={toggleFullscreen}
+            title="Fullscreen Mode"
+          >
+            ⛶
+          </button>
+          <button 
+            className="mode-toggle-btn"
+            onClick={toggleMode}
+            title={isAudioMode ? "Switch to Video" : "Switch to Audio Only"}
+          >
+            {isAudioMode ? '🎥' : '🎵'}
+          </button>
+          <button 
+            className="playlist-btn"
+            onClick={() => setShowPlaylistModal(true)}
+            title="Add to Playlist"
+          >
+            ➕ 📚
+          </button>
+          <button 
+            className={`heart-btn ${liked ? 'liked' : ''}`}
+            onClick={handleLike}
+            title={liked ? "Unlike" : "Like"}
+          >
+            {liked ? '❤️' : '🤍'}
+          </button>
+          <button className="close-btn" onClick={onClose} title="Close Player">✕</button>
+        </div>
+      </div>
+
+      {showPlaylistModal && (
+        <div className="modal-overlay" onClick={() => setShowPlaylistModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Add to Playlist</h3>
+              <button className="modal-close" onClick={() => setShowPlaylistModal(false)}>✕</button>
+            </div>
+            
+            <div className="modal-body">
+              <div className="create-playlist-section">
+                <input
+                  type="text"
+                  placeholder="Create new playlist..."
+                  value={newPlaylistName}
+                  onChange={(e) => setNewPlaylistName(e.target.value)}
+                  onKeyPress={(e) => e.key === 'Enter' && createPlaylist()}
+                  className="playlist-input"
+                />
+                <button 
+                  onClick={createPlaylist} 
+                  disabled={loading || !newPlaylistName.trim()}
+                  className="create-playlist-btn"
+                >
+                  Create
+                </button>
+              </div>
+
+              <div className="playlists-list">
+                {playlists.length === 0 ? (
+                  <p className="no-playlists">No playlists yet. Create one above!</p>
+                ) : (
+                  playlists.map((playlist) => (
+                    <div 
+                      key={playlist.id} 
+                      className="playlist-item"
+                      onClick={() => addToPlaylist(playlist.id)}
+                    >
+                      <span>📚 {playlist.name}</span>
+                      <span className="playlist-arrow">→</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Karaoke Mode */}
+      {showKaraoke && (
+        <KaraokeMode
+          song={currentSong}
+          player={player}
+          onClose={() => setShowKaraoke(false)}
+        />
+      )}
+    </>
+  );
+}
+
+export default MusicPlayer;

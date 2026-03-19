@@ -1,0 +1,78 @@
+================================================================================
+                    MUSIC SAGAR - QUICK START GUIDE
+================================================================================
+
+EASIEST WAY TO RUN:
+-------------------
+1. Go to folder: D:\Sagar\MusicSagar
+2. Double-click: start-servers.bat
+3. Wait 10-15 seconds
+4. Open browser: http://localhost:5173
+5. Login with:
+   Email: sagar@example.com
+   Password: Sagar@269
+
+================================================================================
+
+MANUAL START (Two Command Windows):
+------------------------------------
+
+WINDOW 1 - Backend:
+cd D:\Sagar\MusicSagar\backend
+venv\Scripts\activate
+python -m uvicorn app.main:app --reload
+
+WINDOW 2 - Frontend:
+cd D:\Sagar\MusicSagar\frontend
+npm run dev
+
+Then open: http://localhost:5173
+
+================================================================================
+
+STOP SERVERS:
+-------------
+- Close both command windows
+- Or press Ctrl+C in each window
+
+================================================================================
+
+IMPORTANT URLS:
+---------------
+Frontend:  http://localhost:5173
+Backend:   http://localhost:8000
+API Docs:  http://localhost:8000/docs
+
+================================================================================
+
+TROUBLESHOOTING:
+----------------
+Port 8000 busy?
+  netstat -ano | findstr :8000
+  taskkill /PID <number> /F
+
+Port 5173 busy?
+  netstat -ano | findstr :5173
+  taskkill /PID <number> /F
+
+Database issues?
+  cd backend
+  del music_sagar.db
+  python init_fresh_db.py
+
+================================================================================
+
+PROJECT LOCATION:
+-----------------
+D:\Sagar\MusicSagar\
+  ├── backend\          (FastAPI server)
+  ├── frontend\         (React app)
+  └── start-servers.bat (Quick start)
+
+================================================================================
+
+NEED MORE HELP?
+---------------
+See: HOW_TO_RUN.md (detailed guide)
+
+================================================================================
