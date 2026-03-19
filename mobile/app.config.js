@@ -6,7 +6,7 @@ module.exports = {
   ...baseConfig.expo,
   extra: {
     ...baseConfig.expo.extra, // keep existing extras (if any)
-    apiUrl: process.env.API_URL || 'http://192.168.0.100:8000',
+    apiUrl: process.env.API_URL || 'https://brave-success-production.up.railway.app',
     eas: {
       projectId: "8aefbd0d-321d-4e56-b92b-0a12db0649c9"
     }
