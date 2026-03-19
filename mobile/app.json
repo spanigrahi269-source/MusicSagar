@@ -28,7 +28,6 @@
     },
     "scheme": "musicsagar",
     "plugins": [
-      "expo-av",
       [
         "expo-secure-store",
         {

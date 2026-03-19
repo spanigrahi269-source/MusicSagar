@@ -132,7 +132,6 @@ const moreStyles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     marginBottom: 10,
-    gap: 14,
   },
   iconWrap: {
     width: 40,
@@ -141,6 +140,7 @@ const moreStyles = StyleSheet.create({
     backgroundColor: colors.bgElevated,
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 14,
   },
   label: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600' },
 });

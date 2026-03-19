@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   slider: { width: '100%', height: 40 },
   sliderLabels: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 },
   sliderLabel: { color: colors.textSecondary, fontSize: 12 },
-  langRow: { flexDirection: 'row', gap: 8, marginBottom: 16, flexWrap: 'wrap' },
+  langRow: { flexDirection: 'row', marginBottom: 16, flexWrap: 'wrap' },
   langChip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
@@ -131,6 +131,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.bgCard,
     borderWidth: 1,
     borderColor: colors.border,
+    marginRight: 8,
+    marginBottom: 8,
   },
   langText: { color: colors.textSecondary, fontSize: 13 },
   searchBtn: {

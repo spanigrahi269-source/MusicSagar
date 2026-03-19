@@ -78,12 +78,11 @@ const styles = StyleSheet.create({
   clearBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
     marginBottom: 16,
     padding: 10,
     backgroundColor: colors.bgCard,
     borderRadius: 10,
     alignSelf: 'flex-start',
   },
-  clearText: { color: colors.error, fontSize: 14, fontWeight: '600' },
+  clearText: { color: colors.error, fontSize: 14, fontWeight: '600', marginLeft: 8 },
 });

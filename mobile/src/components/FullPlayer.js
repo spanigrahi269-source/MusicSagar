@@ -146,8 +146,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    gap: 24,
   },
-  controlBtn: { padding: 8 },
+  controlBtn: { padding: 8, marginHorizontal: 12 },
   playBtn: { padding: 4 },
 });

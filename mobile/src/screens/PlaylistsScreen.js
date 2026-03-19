@@ -131,9 +131,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderWidth: 1,
     borderColor: colors.primary,
-    gap: 10,
   },
-  createText: { color: colors.primary, fontSize: 15, fontWeight: '600' },
+  createText: { color: colors.primary, fontSize: 15, fontWeight: '600', marginLeft: 10 },
   playlistCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -166,7 +165,7 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     marginBottom: 16,
   },
-  modalBtns: { flexDirection: 'row', justifyContent: 'flex-end', gap: 12 },
-  cancelBtn: { padding: 10 },
+  modalBtns: { flexDirection: 'row', justifyContent: 'flex-end' },
+  cancelBtn: { padding: 10, marginRight: 12 },
   confirmBtn: { backgroundColor: colors.primary, borderRadius: 8, paddingHorizontal: 20, paddingVertical: 10 },
 });
