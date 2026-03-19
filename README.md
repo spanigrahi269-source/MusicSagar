@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # 🎵 Music Sagar
 
 > Your personal music streaming platform powered by YouTube
@@ -374,3 +375,6 @@ If you find this project useful, please consider giving it a star ⭐
 **Version**: 1.0.0  
 **Last Updated**: February 27, 2026  
 **Status**: Production Ready ✅
+=======
+# MusicSagar
+>>>>>>> 15d2732341c316399bf995f237ad738cccd72d31
