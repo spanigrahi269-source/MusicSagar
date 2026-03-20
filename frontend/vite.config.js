@@ -6,13 +6,15 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
-    watch: {
-      usePolling: true
-    }
+    allowedHosts: 'all'
   },
   preview: {
-    host: true,
+    host: '0.0.0.0',
     port: 4173,
-    allowedHosts: 'all'
+    allowedHosts: [
+      'all',
+      '.railway.app',
+      'delightful-perception-production-01e2.up.railway.app'
+    ]
   }
 })
