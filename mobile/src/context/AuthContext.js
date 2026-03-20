@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/axios';
 
 const AuthContext = createContext(null);
@@ -12,8 +12,8 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     (async () => {
       try {
-        const storedToken = await SecureStore.getItemAsync('token');
-        const storedUser = await SecureStore.getItemAsync('user');
+        const storedToken = await AsyncStorage.getItem('token');
+        const storedUser = await AsyncStorage.getItem('user');
         if (storedToken && storedUser) {
           setToken(storedToken);
           setUser(JSON.parse(storedUser));
@@ -26,8 +26,8 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const res = await api.post('/auth/login', { email, password });
     const { access_token, user: userData } = res.data;
-    await SecureStore.setItemAsync('token', access_token);
-    await SecureStore.setItemAsync('user', JSON.stringify(userData));
+    await AsyncStorage.setItem('token', access_token);
+    await AsyncStorage.setItem('user', JSON.stringify(userData));
     setToken(access_token);
     setUser(userData);
     return userData;
@@ -39,8 +39,8 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    await SecureStore.deleteItemAsync('token');
-    await SecureStore.deleteItemAsync('user');
+    await AsyncStorage.removeItem('token');
+    await AsyncStorage.removeItem('user');
     setToken(null);
     setUser(null);
   };

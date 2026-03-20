@@ -1,10 +1,8 @@
 import axios from 'axios';
-import * as SecureStore from 'expo-secure-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 
-// API URL is set via app.config.js extra.apiUrl
-// Override at start time: API_URL=http://192.168.x.x:8000 npx expo start
-const API_URL = Constants.expoConfig?.extra?.apiUrl || 'http://10.0.2.2:8000';
+const API_URL = Constants.expoConfig?.extra?.apiUrl || 'https://brave-success-production.up.railway.app';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -14,7 +12,7 @@ const api = axios.create({
 
 api.interceptors.request.use(async (config) => {
   try {
-    const token = await SecureStore.getItemAsync('token');
+    const token = await AsyncStorage.getItem('token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
   } catch (_) {}
   return config;
@@ -24,8 +22,8 @@ api.interceptors.response.use(
   (res) => res,
   async (error) => {
     if (error.response?.status === 401) {
-      await SecureStore.deleteItemAsync('token');
-      await SecureStore.deleteItemAsync('user');
+      await AsyncStorage.removeItem('token');
+      await AsyncStorage.removeItem('user');
     }
     return Promise.reject(error);
   }

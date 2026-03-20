@@ -27,13 +27,6 @@
       "favicon": "./assets/favicon.png"
     },
     "scheme": "musicsagar",
-    "plugins": [
-      [
-        "expo-secure-store",
-        {
-          "faceIDPermission": "Allow Music Sagar to use Face ID."
-        }
-      ]
-    ]
+    "plugins": []
   }
 }

@@ -1,9 +1,10 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 
 import HomeScreen from '../screens/HomeScreen';
 import SearchScreen from '../screens/SearchScreen';
@@ -22,12 +23,55 @@ import { colors } from '../theme/colors';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
+const MoreTab = createStackNavigator();
 
 const screenOptions = {
   headerStyle: { backgroundColor: colors.bgCard, borderBottomColor: colors.border, borderBottomWidth: 1 },
   headerTintColor: colors.text,
   headerTitleStyle: { fontWeight: '700' },
 };
+
+function MoreMenuScreen() {
+  const navigation = useNavigation();
+  const items = [
+    { name: 'Trending', icon: 'flame', label: 'Trending Songs' },
+    { name: 'Liked', icon: 'heart', label: 'Liked Songs' },
+    { name: 'Offline', icon: 'download', label: 'Saved Songs' },
+    { name: 'Mood', icon: 'happy', label: 'Mood Player' },
+    { name: 'Analytics', icon: 'person-circle', label: 'Profile & Stats' },
+  ];
+
+  return (
+    <View style={moreStyles.container}>
+      {items.map((item) => (
+        <TouchableOpacity
+          key={item.name}
+          style={moreStyles.item}
+          onPress={() => navigation.navigate(item.name)}
+        >
+          <View style={moreStyles.iconWrap}>
+            <Ionicons name={item.icon} size={24} color={colors.primary} />
+          </View>
+          <Text style={moreStyles.label}>{item.label}</Text>
+          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
+}
+
+function MoreStack() {
+  return (
+    <MoreTab.Navigator screenOptions={screenOptions}>
+      <MoreTab.Screen name="MoreMenu" component={MoreMenuScreen} options={{ title: 'More' }} />
+      <MoreTab.Screen name="Trending" component={TrendingScreen} options={{ title: 'Trending' }} />
+      <MoreTab.Screen name="Liked" component={LikedScreen} options={{ title: 'Liked Songs' }} />
+      <MoreTab.Screen name="Offline" component={OfflineScreen} options={{ title: 'Saved Songs' }} />
+      <MoreTab.Screen name="Mood" component={MoodScreen} options={{ title: 'Mood Player' }} />
+      <MoreTab.Screen name="Analytics" component={AnalyticsScreen} options={{ title: 'Profile & Stats' }} />
+    </MoreTab.Navigator>
+  );
+}
 
 function PlaylistStack() {
   return (
@@ -77,49 +121,12 @@ function TabNavigator() {
   );
 }
 
-const MoreTab = createStackNavigator();
-function MoreStack() {
+export default function AppNavigator() {
   return (
-    <MoreTab.Navigator screenOptions={screenOptions}>
-      <MoreTab.Screen name="MoreMenu" component={MoreMenuScreen} options={{ title: 'More' }} />
-      <MoreTab.Screen name="Trending" component={TrendingScreen} options={{ title: 'Trending' }} />
-      <MoreTab.Screen name="Liked" component={LikedScreen} options={{ title: 'Liked Songs' }} />
-      <MoreTab.Screen name="Offline" component={OfflineScreen} options={{ title: 'Saved Songs' }} />
-      <MoreTab.Screen name="Mood" component={MoodScreen} options={{ title: 'Mood Player' }} />
-      <MoreTab.Screen name="Analytics" component={AnalyticsScreen} options={{ title: 'Profile & Stats' }} />
-    </MoreTab.Navigator>
-  );
-}
-
-import { TouchableOpacity, Text } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
-
-function MoreMenuScreen() {
-  const navigation = useNavigation();
-  const items = [
-    { name: 'Trending', icon: 'flame', label: 'Trending Songs' },
-    { name: 'Liked', icon: 'heart', label: 'Liked Songs' },
-    { name: 'Offline', icon: 'download', label: 'Saved Songs' },
-    { name: 'Mood', icon: 'happy', label: 'Mood Player' },
-    { name: 'Analytics', icon: 'person-circle', label: 'Profile & Stats' },
-  ];
-
-  return (
-    <View style={moreStyles.container}>
-      {items.map((item) => (
-        <TouchableOpacity
-          key={item.name}
-          style={moreStyles.item}
-          onPress={() => navigation.navigate(item.name)}
-        >
-          <View style={moreStyles.iconWrap}>
-            <Ionicons name={item.icon} size={24} color={colors.primary} />
-          </View>
-          <Text style={moreStyles.label}>{item.label}</Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-        </TouchableOpacity>
-      ))}
-    </View>
+    <NavigationContainer>
+      <TabNavigator />
+      <FullPlayer />
+    </NavigationContainer>
   );
 }
 
@@ -144,12 +151,3 @@ const moreStyles = StyleSheet.create({
   },
   label: { flex: 1, color: colors.text, fontSize: 15, fontWeight: '600' },
 });
-
-export default function AppNavigator() {
-  return (
-    <NavigationContainer>
-      <TabNavigator />
-      <FullPlayer />
-    </NavigationContainer>
-  );
-}
