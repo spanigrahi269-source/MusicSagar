@@ -1,59 +1,63 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { enableScreens } from 'react-native-screens';
-import { NavigationContainer } from '@react-navigation/native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Ionicons } from '@expo/vector-icons';
-import { View, Text, StyleSheet } from 'react-native';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { PlayerProvider } from './src/context/PlayerContext';
+import AppNavigator from './src/navigation/AppNavigator';
+import LoginScreen from './src/screens/LoginScreen';
+import { View, ActivityIndicator, Text } from 'react-native';
+import { colors } from './src/theme/colors';
 
 enableScreens();
 
-const Tab = createBottomTabNavigator();
-
-function HomeScreen() {
-  return (
-    <View style={styles.screen}>
-      <Text style={styles.text}>Home Screen</Text>
-    </View>
-  );
+class ErrorBoundary extends React.Component {
+  state = { hasError: false, error: null };
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <View style={{ flex: 1, backgroundColor: '#0f0f1a', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 12 }}>Error</Text>
+          <Text style={{ color: '#a0a0b0', fontSize: 13, textAlign: 'center' }}>{this.state.error?.toString()}</Text>
+        </View>
+      );
+    }
+    return this.props.children;
+  }
 }
 
-function SearchScreen() {
+function RootApp() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  if (!user) return <LoginScreen />;
+
   return (
-    <View style={styles.screen}>
-      <Text style={styles.text}>Search Screen</Text>
-    </View>
+    <PlayerProvider>
+      <AppNavigator />
+    </PlayerProvider>
   );
 }
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" />
-      <NavigationContainer>
-        <Tab.Navigator
-          screenOptions={({ route }) => ({
-            tabBarStyle: { backgroundColor: '#1a1a2e' },
-            tabBarActiveTintColor: '#7c3aed',
-            tabBarInactiveTintColor: '#606070',
-            headerStyle: { backgroundColor: '#1a1a2e' },
-            headerTintColor: '#fff',
-            tabBarIcon: ({ color, size }) => {
-              const icons = { Home: 'home', Search: 'search' };
-              return <Ionicons name={icons[route.name]} size={size} color={color} />;
-            },
-          })}
-        >
-          <Tab.Screen name="Home" component={HomeScreen} />
-          <Tab.Screen name="Search" component={SearchScreen} />
-        </Tab.Navigator>
-      </NavigationContainer>
-    </SafeAreaProvider>
+    <ErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="light" backgroundColor={colors.bg} />
+        <AuthProvider>
+          <RootApp />
+        </AuthProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#0f0f1a', justifyContent: 'center', alignItems: 'center' },
-  text: { color: '#fff', fontSize: 20 },
-});
