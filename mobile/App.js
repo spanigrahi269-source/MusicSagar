@@ -1,40 +1,32 @@
 import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { PlayerProvider } from './src/context/PlayerContext';
-import AppNavigator from './src/navigation/AppNavigator';
-import LoginScreen from './src/screens/LoginScreen';
-import { View, ActivityIndicator } from 'react-native';
-import { colors } from './src/theme/colors';
-
-function RootApp() {
-  const { user, loading } = useAuth();
-
-  if (loading) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.bg }}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  if (!user) return <LoginScreen />;
-
-  return (
-    <PlayerProvider>
-      <AppNavigator />
-    </PlayerProvider>
-  );
-}
 
 export default function App() {
   return (
-    <SafeAreaProvider>
-      <StatusBar style="light" backgroundColor={colors.bg} />
-      <AuthProvider>
-        <RootApp />
-      </AuthProvider>
-    </SafeAreaProvider>
+    <View style={styles.container}>
+      <StatusBar style="light" />
+      <Text style={styles.text}>Music Sagar</Text>
+      <Text style={styles.subtext}>App is running!</Text>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#0f0f1a',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  text: {
+    color: '#fff',
+    fontSize: 32,
+    fontWeight: 'bold',
+  },
+  subtext: {
+    color: '#a0a0b0',
+    fontSize: 16,
+    marginTop: 8,
+  },
+});
