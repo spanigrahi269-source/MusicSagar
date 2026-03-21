@@ -1,9 +1,8 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, lazy, Suspense } from 'react';
 import {
   View, Text, Image, TouchableOpacity, StyleSheet,
-  Modal, Dimensions, StatusBar,
+  Modal, Dimensions, StatusBar, ActivityIndicator,
 } from 'react-native';
-import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { usePlayer } from '../context/PlayerContext';
@@ -11,6 +10,14 @@ import { colors } from '../theme/colors';
 import api from '../api/axios';
 
 const { width, height } = Dimensions.get('window');
+
+// Lazy load WebView to prevent native crash on startup
+let WebView = null;
+try {
+  WebView = require('react-native-webview').WebView;
+} catch (e) {
+  WebView = null;
+}
 
 export default function FullPlayer() {
   const { currentSong, isPlaying, togglePlay, playNext, playPrevious, showPlayer, setShowPlayer } = usePlayer();
@@ -70,14 +77,20 @@ export default function FullPlayer() {
 
         {/* YouTube Player */}
         <View style={styles.playerContainer}>
-          <WebView
-            ref={webviewRef}
-            source={{ html: youtubeHtml }}
-            style={styles.webview}
-            allowsInlineMediaPlayback
-            mediaPlaybackRequiresUserAction={false}
-            javaScriptEnabled
-          />
+          {WebView ? (
+            <WebView
+              ref={webviewRef}
+              source={{ html: youtubeHtml }}
+              style={styles.webview}
+              allowsInlineMediaPlayback
+              mediaPlaybackRequiresUserAction={false}
+              javaScriptEnabled
+            />
+          ) : (
+            <View style={[styles.webview, { justifyContent: 'center', alignItems: 'center' }]}>
+              <Text style={{ color: '#fff' }}>Player unavailable</Text>
+            </View>
+          )}
         </View>
 
         {/* Song Info */}
