@@ -10,11 +10,13 @@ workflows:
         script: |
           cd mobile
           npm install
-      - name: Build Android APK
+      - name: Expo prebuild
         script: |
           cd mobile
           npx expo prebuild --platform android --no-install
-          cd android
-          ./gradlew assembleRelease
+      - name: Build Android APK (debug)
+        script: |
+          cd mobile/android
+          ./gradlew assembleDebug
     artifacts:
-      - mobile/android/app/build/outputs/apk/release/*.apk
+      - mobile/android/app/build/outputs/apk/debug/*.apk

@@ -1,7 +1,7 @@
-import React, { useState, useRef, lazy, Suspense } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, Image, TouchableOpacity, StyleSheet,
-  Modal, Dimensions, StatusBar, ActivityIndicator,
+  Modal, Dimensions, StatusBar, Linking,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -9,15 +9,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { colors } from '../theme/colors';
 import api from '../api/axios';
 
-const { width, height } = Dimensions.get('window');
-
-// Lazy load WebView to prevent native crash on startup
-let WebView = null;
-try {
-  WebView = require('react-native-webview').WebView;
-} catch (e) {
-  WebView = null;
-}
+const { width } = Dimensions.get('window');
 
 export default function FullPlayer() {
   const { currentSong, isPlaying, togglePlay, playNext, playPrevious, showPlayer, setShowPlayer } = usePlayer();
