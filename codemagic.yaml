@@ -11,19 +11,10 @@ workflows:
         script: npm install
       - name: Expo prebuild
         script: npx expo prebuild --platform android --no-install
-      - name: Create assets folder
-        script: mkdir -p android/app/src/main/assets
-      - name: Bundle JS
-        script: |
-          npx react-native bundle \
-            --platform android \
-            --dev false \
-            --entry-file node_modules/expo/AppEntry.js \
-            --bundle-output android/app/src/main/assets/index.android.bundle \
-            --assets-dest android/app/src/main/res
       - name: Build Android APK
         script: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleRelease -x lint
     artifacts:
       - android/app/build/outputs/apk/release/*.apk
