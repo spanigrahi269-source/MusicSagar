@@ -5,21 +5,16 @@ workflows:
     environment:
       node: 20.9.0
       java: 17
+    working_directory: mobile
     scripts:
       - name: Install dependencies
-        script: |
-          cd mobile
-          npm install
+        script: npm install
       - name: Expo prebuild
-        script: |
-          cd mobile
-          npx expo prebuild --platform android --no-install
+        script: npx expo prebuild --platform android --no-install
       - name: Create assets folder
-        script: |
-          mkdir -p mobile/android/app/src/main/assets
+        script: mkdir -p android/app/src/main/assets
       - name: Bundle JS
         script: |
-          cd mobile
           npx react-native bundle \
             --platform android \
             --dev false \
@@ -28,7 +23,7 @@ workflows:
             --assets-dest android/app/src/main/res
       - name: Build Android APK
         script: |
-          cd mobile/android
+          cd android
           ./gradlew assembleRelease -x lint
     artifacts:
-      - mobile/android/app/build/outputs/apk/release/*.apk
+      - android/app/build/outputs/apk/release/*.apk
